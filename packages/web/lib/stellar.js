@@ -74,22 +74,17 @@ export async function submitAttest(cfg, _address, proofHex, publicHex) {
   return { count: StellarSdk.scValToNative(got.returnValue), hash: sent.hash };
 }
 
+import { simulateGetVouches } from "./shared/getVouches";
+
 export async function getVouches(cfg, _sourceAddress, contentHash32) {
   const server = rpc(cfg);
   const account = await server.getAccount(cfg.readSourcePublicKey);
-  const contract = new StellarSdk.Contract(cfg.attestContractId);
-  const op = contract.call("get_vouches", StellarSdk.xdr.ScVal.scvBytes(contentHash32));
-  const tx = new StellarSdk.TransactionBuilder(account, {
-    fee: "100",
+  return simulateGetVouches({
+    server,
+    account,
+    contractId: cfg.attestContractId,
+    contentHashBytes: contentHash32,
     networkPassphrase: cfg.networkPassphrase,
-  })
-    .addOperation(op)
-    .setTimeout(30)
-    .build();
-  const sim = await server.simulateTransaction(tx);
-  const ns = StellarSdk.SorobanRpc || StellarSdk.rpc;
-  if (ns.Api?.isSimulationError?.(sim) || sim.error) {
-    throw new Error(typeof sim.error === "string" ? sim.error : "simulation error");
-  }
-  return StellarSdk.scValToNative(sim.result.retval);
+    StellarSdk,
+  });
 }
