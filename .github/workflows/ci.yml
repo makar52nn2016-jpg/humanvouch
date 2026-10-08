@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  contracts:
+    name: contracts (build + test)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain (1.89.0)
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.89.0
+          targets: wasm32v1-none
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            packages/contracts/attest
+            packages/contracts/groth16-verifier
+
+      - name: Build attest contract (wasm32v1-none, release)
+        run: cargo build --manifest-path packages/contracts/attest/Cargo.toml --target wasm32v1-none --release
+
+      - name: Build groth16-verifier contract (wasm32v1-none, release)
+        run: cargo build --manifest-path packages/contracts/groth16-verifier/Cargo.toml --target wasm32v1-none --release
+
+      - name: Test attest contract
+        run: cargo test --manifest-path packages/contracts/attest/Cargo.toml --release
+
+      - name: Test groth16-verifier contract
+        run: cargo test --manifest-path packages/contracts/groth16-verifier/Cargo.toml --release
